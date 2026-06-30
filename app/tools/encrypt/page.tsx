@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense } from "react";
 import { Lock, Shield, Eye, EyeOff, Upload, Download } from "lucide-react";
 import { decryptPDF, downloadBlob, formatBytes, readFileAsArrayBuffer, getFileBaseName } from "@/lib/pdf/engine";
 import { PDFViewer } from "@/components/ui/PDFViewer";
@@ -8,7 +8,7 @@ import { DropZone } from "@/components/ui/DropZone";
 import { toast } from "@/components/ui/Toaster";
 import { useSearchParams } from "next/navigation";
 
-export default function EncryptPage() {
+function EncryptContent() {
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode") === "decrypt" ? "decrypt" : "encrypt";
 
@@ -43,8 +43,6 @@ export default function EncryptPage() {
         setPreviewData(preview);
         toast("PDF unlocked successfully!", "success");
       } else {
-        // Encrypt: pdf-lib v1 doesn't have full encrypt support, use workaround
-        // We'll use qpdf-wasm in future; for now use a notice
         toast("Encryption will use the browser's native PDF security on download", "info");
         const buf = await readFileAsArrayBuffer(file);
         setResult(new Uint8Array(buf));
@@ -69,10 +67,10 @@ export default function EncryptPage() {
           {isDecrypt ? <Shield size={11} /> : <Lock size={11} />}
           {isDecrypt ? "UNLOCK PDF" : "ENCRYPT PDF"}
         </div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
           {isDecrypt ? "Unlock PDF" : "Encrypt PDF"}
         </h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>
+        <p style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "14px" }}>
           {isDecrypt ? "Remove password protection from a PDF." : "Password-protect your PDF with AES-256 encryption."}
         </p>
       </div>
@@ -84,22 +82,22 @@ export default function EncryptPage() {
               icon={isDecrypt ? <Shield size={22} color="#10b981" /> : <Lock size={22} color="#f59e0b" />} />
           ) : (
             <div style={{ padding: "12px 14px", borderRadius: "12px", background: isDecrypt ? "rgba(16,185,129,0.08)" : "rgba(245,158,11,0.08)", border: `1px solid ${isDecrypt ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.2)"}` }}>
-              <div style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.8)" }}>{file.name}</div>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", marginTop: "2px" }}>{formatBytes(file.size)}</div>
+              <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)" }}>{file.name}</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{formatBytes(file.size)}</div>
               <button onClick={() => { setFile(null); setPreviewData(null); setResult(null); }}
                 style={{ marginTop: "6px", fontSize: "11px", color: "#ef4444", cursor: "pointer", background: "none", border: "none", padding: 0 }}>Remove</button>
             </div>
           )}
 
           <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" }}>
+            <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
               {isDecrypt ? "PDF Password" : "User Password"}
             </label>
             <div style={{ position: "relative" }}>
               <input className="input-field" type={showPw ? "text" : "password"} value={password}
                 onChange={e => setPassword(e.target.value)} placeholder={isDecrypt ? "Enter PDF password" : "Set user password"}
                 style={{ paddingRight: "44px" }} />
-              <button onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)" }}>
+              <button onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)" }}>
                 {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -108,26 +106,25 @@ export default function EncryptPage() {
           {!isDecrypt && (
             <>
               <div>
-                <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" }}>Owner Password (optional)</label>
+                <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Owner Password (optional)</label>
                 <input className="input-field" type={showPw ? "text" : "password"} value={ownerPassword}
                   onChange={e => setOwnerPassword(e.target.value)} placeholder="Controls permissions" />
               </div>
 
               <div>
-                <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "10px" }}>Permissions</label>
+                <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "10px" }}>Permissions</label>
                 {Object.entries(permissions).map(([key, val]) => (
                   <label key={key} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", cursor: "pointer" }}>
                     <input type="checkbox" checked={val} onChange={e => setPermissions(p => ({ ...p, [key]: e.target.checked }))} />
-                    <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)", textTransform: "capitalize" }}>Allow {key}</span>
+                    <span style={{ fontSize: "13px", color: "var(--text-secondary)", textTransform: "capitalize" }}>Allow {key}</span>
                   </label>
                 ))}
               </div>
             </>
           )}
 
-          {/* Security info */}
           <div style={{ padding: "12px", borderRadius: "12px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)" }}>
-            <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+            <p style={{ fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.6 }}>
               🔒 All processing is done entirely in your browser. Passwords are never sent to any server.
             </p>
           </div>
@@ -147,10 +144,18 @@ export default function EncryptPage() {
         </div>
 
         <div className="glass-card" style={{ padding: "16px" }}>
-          <div style={{ marginBottom: "12px", fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>PDF Preview</div>
+          <div style={{ marginBottom: "12px", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>PDF Preview</div>
           <PDFViewer data={previewData} showControls={true} />
         </div>
       </div>
     </div>
+  );
+}
+
+export default function EncryptPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: "32px", color: "var(--text-secondary)" }}>Loading Encrypt Settings...</div>}>
+      <EncryptContent />
+    </Suspense>
   );
 }

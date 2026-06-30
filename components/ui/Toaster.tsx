@@ -70,19 +70,19 @@ export function Toaster() {
             borderRadius: "14px",
             padding: "14px 16px",
             backdropFilter: "blur(20px)",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+            boxShadow: "0 20px 60px rgba(var(--color-obverse-rgb), 0.5)",
             minWidth: "300px",
             maxWidth: "400px",
             backgroundColor: colors[t.type],
           }}
         >
           <div className="flex-shrink-0 mt-0.5">{icons[t.type]}</div>
-          <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.9)", flex: 1, lineHeight: "1.4" }}>
+          <p style={{ fontSize: "14px", color: "var(--text-primary)", flex: 1, lineHeight: "1.4" }}>
             {t.message}
           </p>
           <button
             onClick={() => removeToast(t.id)}
-            style={{ color: "rgba(255,255,255,0.3)", cursor: "pointer", flexShrink: 0 }}
+            style={{ color: "var(--text-muted)", cursor: "pointer", flexShrink: 0 }}
           >
             <X size={14} />
           </button>

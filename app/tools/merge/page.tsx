@@ -40,14 +40,14 @@ function SortableItem({ entry, onRemove, onPreview, isActive }: {
         gap: "12px",
         padding: "12px 14px",
         borderRadius: "12px",
-        background: isActive ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.03)",
-        border: `1px solid ${isActive ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`,
+        background: isActive ? "rgba(99,102,241,0.12)" : "rgba(var(--color-invert-rgb), 0.03)",
+        border: `1px solid ${isActive ? "rgba(99,102,241,0.4)" : "rgba(var(--color-invert-rgb), 0.06)"}`,
         cursor: "pointer",
         transition: "all 0.2s",
       }}
       onClick={() => onPreview(entry)}
     >
-      <div {...attributes} {...listeners} style={{ cursor: "grab", color: "rgba(255,255,255,0.2)" }} onClick={e => e.stopPropagation()}>
+      <div {...attributes} {...listeners} style={{ cursor: "grab", color: "var(--text-muted)" }} onClick={e => e.stopPropagation()}>
         <GripVertical size={16} />
       </div>
 
@@ -59,10 +59,10 @@ function SortableItem({ entry, onRemove, onPreview, isActive }: {
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {entry.file.name}
         </div>
-        <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", marginTop: "2px" }}>
+        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
           {formatBytes(entry.file.size)}{entry.info ? ` · ${entry.info.pageCount} pages` : ""}
         </div>
       </div>
@@ -181,10 +181,10 @@ export default function MergePage() {
         <div className="badge badge-indigo" style={{ marginBottom: "10px" }}>
           <GitMerge size={11} /> MERGE PDF
         </div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
           Merge PDF Files
         </h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>
+        <p style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "14px" }}>
           Combine multiple PDFs into one. Drag to reorder pages before merging.
         </p>
       </div>
@@ -208,10 +208,10 @@ export default function MergePage() {
           {files.length > 0 && (
             <div>
               <div className="flex items-center justify-between" style={{ marginBottom: "10px" }}>
-                <span style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   Files ({files.length})
                 </span>
-                <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                   {totalPages} pages · {formatBytes(totalSize)}
                 </span>
               </div>
@@ -269,7 +269,7 @@ export default function MergePage() {
               gap: "10px",
             }}>
               <Download size={14} color="#10b981" />
-              <span style={{ fontSize: "13px", color: "#6ee7b7" }}>
+              <span style={{ fontSize: "13px", color: "var(--accent-green)" }}>
                 Merged: {formatBytes(resultSize)}
               </span>
             </div>
@@ -281,7 +281,7 @@ export default function MergePage() {
               <div className="progress-bar">
                 <div className="progress-fill" style={{ width: `${progress}%` }} />
               </div>
-              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", marginTop: "6px", textAlign: "center" }}>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px", textAlign: "center" }}>
                 Merging... {progress}%
               </p>
             </div>
@@ -310,7 +310,7 @@ export default function MergePage() {
           </button>
 
           {files.length < 2 && (
-            <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.2)", textAlign: "center" }}>
+            <p style={{ fontSize: "11px", color: "var(--text-muted)", textAlign: "center" }}>
               Add at least 2 PDF files to merge
             </p>
           )}
@@ -319,7 +319,7 @@ export default function MergePage() {
         {/* RIGHT — Live Preview */}
         <div className="glass-card" style={{ padding: "16px", display: "flex", flexDirection: "column" }}>
           <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Live Preview
             </span>
             {activePreview && (

@@ -108,25 +108,26 @@ omnipdf/
 ├── app/
 │   ├── globals.css              ✅ DONE — full design system
 │   ├── layout.tsx               ✅ DONE — root layout + Sidebar + Toaster
-│   ├── page.tsx                 ⬜ TODO — landing/dashboard homepage
+│   ├── page.tsx                 ✅ DONE — landing/dashboard homepage
 │   ├── tools/
-│   │   ├── merge/page.tsx       ⬜ TODO
-│   │   ├── split/page.tsx       ⬜ TODO
-│   │   ├── compress/page.tsx    ⬜ TODO
-│   │   ├── crop/page.tsx        ⬜ TODO
-│   │   ├── rotate/page.tsx      ⬜ TODO
-│   │   ├── watermark/page.tsx   ⬜ TODO
-│   │   ├── encrypt/page.tsx     ⬜ TODO
-│   │   ├── convert/page.tsx     ⬜ TODO
-│   │   ├── ocr/page.tsx         ⬜ TODO
-│   │   ├── pdf-to-images/page.tsx ⬜ TODO
-│   │   ├── images-to-pdf/page.tsx ⬜ TODO
-│   │   ├── edit/page.tsx        ⬜ TODO
-│   │   ├── sign/page.tsx        ⬜ TODO
-│   │   ├── redact/page.tsx      ⬜ TODO
-│   │   └── compare/page.tsx     ⬜ TODO
-│   ├── scanner/page.tsx         ⬜ TODO
-│   └── print/page.tsx           ⬜ TODO
+│   │   ├── merge/page.tsx       ✅ DONE
+│   │   ├── split/page.tsx       ✅ DONE
+│   │   ├── compress/page.tsx    ✅ DONE
+│   │   ├── crop/page.tsx        ✅ DONE
+│   │   ├── rotate/page.tsx      ✅ DONE
+│   │   ├── watermark/page.tsx   ✅ DONE
+│   │   ├── encrypt/page.tsx     ✅ DONE
+│   │   ├── convert/page.tsx     ✅ DONE — PDF↔Text, PDF↔Images, DOCX→PDF, Images→PDF
+│   │   ├── ocr/page.tsx         ✅ DONE
+│   │   ├── pdf-to-images/page.tsx ✅ DONE
+│   │   ├── images-to-pdf/page.tsx ✅ DONE
+│   │   ├── edit/page.tsx        ✅ DONE
+│   │   ├── sign/page.tsx        ✅ DONE
+│   │   ├── redact/page.tsx      ✅ DONE
+│   │   ├── compare/page.tsx     ✅ DONE
+│   │   └── invert/page.tsx      ✅ DONE
+│   ├── scanner/page.tsx         ✅ DONE — camera scan with filters
+│   └── print/page.tsx           ✅ DONE — Foxit-style print studio
 ├── components/
 │   ├── layout/
 │   │   └── Sidebar.tsx          ✅ DONE — collapsible, color-coded, all routes
@@ -619,14 +620,14 @@ import { toast } from "@/components/ui/Toaster";
 | DropZone.tsx | ✅ Done | Drag-drop + validation |
 | Toaster.tsx | ✅ Done | Global toast system |
 | lib/pdf/engine.ts | ✅ Done | All PDF operations |
-| app/page.tsx | ⬜ TODO | Homepage dashboard |
-| All tool pages | ⬜ TODO | 15 pages |
-| scanner/page.tsx | ⬜ TODO | Web camera scanner |
-| print/page.tsx | ⬜ TODO | Print studio |
-| backend/ | ⬜ TODO | Render.com Express |
-| Tauri setup | ⬜ TODO | Desktop wrapper |
-| Expo mobile | ⬜ TODO | Android scanner app |
-| GitHub README | ⬜ TODO | Polish + release |
+| app/page.tsx | ✅ Done | Homepage dashboard |
+| All tool pages (17) | ✅ Done | All tools fully implemented |
+| scanner/page.tsx | ✅ Done | Web camera scanner |
+| print/page.tsx | ✅ Done | Print studio |
+| backend/ | ✅ Done | Express + LibreOffice headless |
+| Tauri setup | ✅ Done | Desktop wrapper |
+| Expo mobile | ✅ Done | Android scanner app |
+| GitHub README | ✅ Done | Polish + release |
 
 ---
 

@@ -18,6 +18,7 @@ export default function CompressPage() {
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<Uint8Array | null>(null);
   const [level, setLevel] = useState<CompressionLevel>("medium");
+  const [percent, setPercent] = useState<number>(50); // Slider 10-100
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<{ data: Uint8Array; originalSize: number; newSize: number } | null>(null);
@@ -56,8 +57,8 @@ export default function CompressPage() {
     <div style={{ minHeight: "100vh", padding: "32px" }}>
       <div style={{ marginBottom: "28px" }}>
         <div className="badge badge-green" style={{ marginBottom: "10px" }}><Minimize2 size={11} /> COMPRESS PDF</div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>Compress PDF</h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>Reduce PDF file size while maintaining readability.</p>
+        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Compress PDF</h1>
+        <p style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "14px" }}>Reduce PDF file size while maintaining readability.</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: "20px", minHeight: "calc(100vh - 200px)" }}>
@@ -66,28 +67,51 @@ export default function CompressPage() {
             <DropZone onFiles={handleFile} accept=".pdf" multiple={false} label="Drop PDF here" icon={<Upload size={22} color="#10b981" />} />
           ) : (
             <div style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-              <div style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.8)" }}>{file.name}</div>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", marginTop: "2px" }}>Original: {formatBytes(file.size)}</div>
+              <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)" }}>{file.name}</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Original: {formatBytes(file.size)}</div>
               <button onClick={() => { setFile(null); setPreviewData(null); setResult(null); }}
                 style={{ marginTop: "6px", fontSize: "11px", color: "#ef4444", cursor: "pointer", background: "none", border: "none", padding: 0 }}>Remove</button>
             </div>
           )}
 
           <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Compression Level</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "10px" }}>
+              <label style={{ fontSize: "12px", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Compression Intensity</label>
+              <span style={{ fontSize: "16px", fontWeight: 700, color: "#10b981" }}>{percent}%</span>
+            </div>
+            
+            <input 
+              type="range" 
+              min="10" 
+              max="100" 
+              step="10" 
+              value={percent}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setPercent(val);
+                if (val <= 30) setLevel("low");
+                else if (val <= 60) setLevel("medium");
+                else if (val <= 80) setLevel("high");
+                else setLevel("extreme");
+              }}
+              style={{ width: "100%", accentColor: "#10b981", marginBottom: "16px" }}
+            />
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
               {levels.map(l => (
-                <button key={l.id} onClick={() => setLevel(l.id)} style={{
-                  display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px", borderRadius: "12px", cursor: "pointer", textAlign: "left",
-                  background: level === l.id ? `${l.color}12` : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${level === l.id ? l.color + "40" : "rgba(255,255,255,0.06)"}`,
+                <button key={l.id} onClick={() => {
+                  setLevel(l.id);
+                  setPercent(l.id === "low" ? 20 : l.id === "medium" ? 50 : l.id === "high" ? 80 : 100);
+                }} style={{
+                  display: "flex", flexDirection: "column", gap: "4px", padding: "12px", borderRadius: "12px", cursor: "pointer", textAlign: "left",
+                  background: level === l.id ? `${l.color}12` : "rgba(var(--color-invert-rgb), 0.03)",
+                  border: `1px solid ${level === l.id ? l.color + "40" : "rgba(var(--color-invert-rgb), 0.06)"}`,
                 }}>
-                  <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: l.color, boxShadow: level === l.id ? `0 0 8px ${l.color}` : "none", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "13px", fontWeight: 600, color: level === l.id ? "white" : "rgba(255,255,255,0.6)" }}>{l.label}</div>
-                    <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", marginTop: "2px" }}>{l.desc}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: l.color, boxShadow: level === l.id ? `0 0 6px ${l.color}` : "none" }} />
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: level === l.id ? "white" : "rgba(var(--color-invert-rgb), 0.6)" }}>{l.label}</span>
                   </div>
-                  <span style={{ fontSize: "11px", color: l.color, fontWeight: 600 }}>{l.reduction}</span>
+                  <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{l.desc}</div>
                 </button>
               ))}
             </div>
@@ -96,20 +120,20 @@ export default function CompressPage() {
           {processing && (
             <div>
               <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
-              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", marginTop: "6px", textAlign: "center" }}>Compressing... {progress}%</p>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px", textAlign: "center" }}>Compressing... {progress}%</p>
             </div>
           )}
 
           {result && (
             <div style={{ padding: "16px", borderRadius: "14px", background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
-              <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.4)", marginBottom: "10px" }}>Compression Result</div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "10px" }}>Compression Result</div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                <div><div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>Original</div><div style={{ fontSize: "16px", fontWeight: 700, color: "white" }}>{formatBytes(result.originalSize)}</div></div>
+                <div><div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Original</div><div style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>{formatBytes(result.originalSize)}</div></div>
                 <div style={{ color: "#10b981", fontSize: "20px", fontWeight: 800 }}>→</div>
-                <div style={{ textAlign: "right" }}><div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>Compressed</div><div style={{ fontSize: "16px", fontWeight: 700, color: "#10b981" }}>{formatBytes(result.newSize)}</div></div>
+                <div style={{ textAlign: "right" }}><div style={{ fontSize: "11px", color: "var(--text-muted)" }}>Compressed</div><div style={{ fontSize: "16px", fontWeight: 700, color: "#10b981" }}>{formatBytes(result.newSize)}</div></div>
               </div>
               <div className="progress-bar"><div style={{ height: "100%", background: "#10b981", borderRadius: "2px", width: `${Math.max(5, savedPct)}%`, transition: "width 0.5s" }} /></div>
-              <div style={{ fontSize: "13px", color: "#6ee7b7", fontWeight: 600, textAlign: "center", marginTop: "6px" }}>
+              <div style={{ fontSize: "13px", color: "var(--accent-green)", fontWeight: 600, textAlign: "center", marginTop: "6px" }}>
                 {savedPct > 0 ? `Saved ${savedPct}%` : "File is already optimized"}
               </div>
             </div>
@@ -130,7 +154,7 @@ export default function CompressPage() {
         </div>
 
         <div className="glass-card" style={{ padding: "16px" }}>
-          <div style={{ marginBottom: "12px", fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Live Preview</div>
+          <div style={{ marginBottom: "12px", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Live Preview</div>
           <PDFViewer data={previewData} showControls={true} />
         </div>
       </div>

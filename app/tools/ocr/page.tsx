@@ -61,7 +61,7 @@ export default function OCRPage() {
       } else {
         // For PDF: render pages to canvas then OCR each
         const pdfjsLib = await import("pdfjs-dist");
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
         const buf = await readFileAsArrayBuffer(file);
         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
         const texts: string[] = [];
@@ -72,7 +72,7 @@ export default function OCRPage() {
           const vp = page.getViewport({ scale: 2.0 });
           const canvas = document.createElement("canvas");
           canvas.width = vp.width; canvas.height = vp.height;
-          await (page.render({ canvas: canvas.getContext("2d")!, viewport: vp } as any)).promise;
+          await page.render({ canvas, viewport: vp }).promise;
           const blob: Blob = await new Promise(r => canvas.toBlob(b => r(b!)));
           const { data } = await worker.recognize(blob);
           texts.push(`--- Page ${i} ---\n${data.text}`);
@@ -112,8 +112,8 @@ export default function OCRPage() {
         <div className="badge" style={{ marginBottom: "10px", background: "rgba(139,92,246,0.15)", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.25)", display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 12px", borderRadius: "999px", fontSize: "12px" }}>
           <Type size={11} /> OCR — TEXT EXTRACTION
         </div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>OCR — Extract Text</h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>
+        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>OCR — Extract Text</h1>
+        <p style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "14px" }}>
           AI-powered text recognition. Works on scanned PDFs and images. Supports 12 languages.
         </p>
       </div>
@@ -127,15 +127,15 @@ export default function OCRPage() {
               icon={<Upload size={22} color="#8b5cf6" />} />
           ) : (
             <div style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
-              <div style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.8)" }}>{file.name}</div>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)", marginTop: "2px" }}>{formatBytes(file.size)}</div>
+              <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)" }}>{file.name}</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>{formatBytes(file.size)}</div>
               <button onClick={() => { setFile(null); setPreviewData(null); setResult(""); }}
                 style={{ marginTop: "6px", fontSize: "11px", color: "#ef4444", cursor: "pointer", background: "none", border: "none", padding: 0 }}>Remove</button>
             </div>
           )}
 
           <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" }}>Language</label>
+            <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Language</label>
             <select className="select-field" value={lang} onChange={e => setLang(e.target.value)} style={{ width: "100%" }}>
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
             </select>
@@ -144,7 +144,7 @@ export default function OCRPage() {
           {processing && (
             <div>
               <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
-              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.4)", marginTop: "6px", textAlign: "center" }}>{progressLabel}</p>
+              <p style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "6px", textAlign: "center" }}>{progressLabel}</p>
             </div>
           )}
 
@@ -173,13 +173,13 @@ export default function OCRPage() {
         {/* Right — preview + text output */}
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div className="glass-card" style={{ padding: "16px", flex: "0 0 50%" }}>
-            <div style={{ marginBottom: "12px", fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Input Preview</div>
+            <div style={{ marginBottom: "12px", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Input Preview</div>
             <PDFViewer data={previewData} showControls={true} />
           </div>
 
           <div className="glass-card" style={{ padding: "16px", flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <span style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Extracted Text</span>
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Extracted Text</span>
               {result && <span className="badge badge-green" style={{ fontSize: "10px" }}>● Ready</span>}
             </div>
             <textarea
@@ -188,8 +188,8 @@ export default function OCRPage() {
               value={result || (processing ? "Processing..." : "Run OCR to extract text from the document...")}
               style={{
                 width: "100%", height: "240px", resize: "vertical",
-                background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: "12px", padding: "14px", color: result ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.25)",
+                background: "rgba(var(--color-obverse-rgb), 0.2)", border: "1px solid rgba(var(--color-invert-rgb), 0.06)",
+                borderRadius: "12px", padding: "14px", color: result ? "rgba(var(--color-invert-rgb), 0.8)" : "rgba(var(--color-invert-rgb), 0.25)",
                 fontSize: "13px", lineHeight: "1.6", fontFamily: "ui-monospace, monospace", outline: "none",
               }}
             />

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Scissors, Upload, Download } from "lucide-react";
-import JSZip from "jszip";
+
 import { splitPDF, downloadBlob, formatBytes, getPDFInfo, readFileAsArrayBuffer, type PDFInfo } from "@/lib/pdf/engine";
 import { PDFViewer, PageThumbnails } from "@/components/ui/PDFViewer";
 import { DropZone } from "@/components/ui/DropZone";
@@ -66,6 +66,7 @@ export default function SplitPage() {
       if (parts.length === 1) {
         downloadBlob(new Blob([(parts[0] as Uint8Array).buffer as ArrayBuffer], { type: "application/pdf" }), `split_1.pdf`);
       } else {
+        const JSZip = (await import("jszip")).default;
         const zip = new JSZip();
         parts.forEach((part, i) => zip.file(`part_${i + 1}.pdf`, part));
         const blob = await zip.generateAsync({ type: "blob" });
@@ -96,8 +97,8 @@ export default function SplitPage() {
         <div className="badge badge-indigo" style={{ marginBottom: "10px" }}>
           <Scissors size={11} /> SPLIT PDF
         </div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>Split PDF</h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>
+        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Split PDF</h1>
+        <p style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "14px" }}>
           Split by page range, every N pages, or extract specific pages.
         </p>
       </div>
@@ -109,8 +110,8 @@ export default function SplitPage() {
             <DropZone onFiles={handleFile} accept=".pdf" multiple={false} label="Drop PDF here" icon={<Upload size={22} color="#8b5cf6" />} />
           ) : (
             <div style={{ padding: "12px 14px", borderRadius: "12px", background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
-              <div style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.8)", marginBottom: "4px" }}>{file.name}</div>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>{formatBytes(file.size)} · {info?.pageCount ?? "?"} pages</div>
+              <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)", marginBottom: "4px" }}>{file.name}</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{formatBytes(file.size)} · {info?.pageCount ?? "?"} pages</div>
               <button onClick={() => { setFile(null); setInfo(null); setPreviewData(null); }}
                 style={{ marginTop: "8px", fontSize: "11px", color: "#ef4444", cursor: "pointer", background: "none", border: "none", padding: 0 }}>
                 Remove file
@@ -124,9 +125,9 @@ export default function SplitPage() {
               <button key={t.id} onClick={() => setMode(t.id)}
                 style={{
                   flex: 1, padding: "8px", borderRadius: "10px", fontSize: "12px", fontWeight: 500, cursor: "pointer",
-                  background: mode === t.id ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${mode === t.id ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`,
-                  color: mode === t.id ? "#a5b4fc" : "rgba(255,255,255,0.4)",
+                  background: mode === t.id ? "rgba(99,102,241,0.2)" : "rgba(var(--color-invert-rgb), 0.03)",
+                  border: `1px solid ${mode === t.id ? "rgba(99,102,241,0.4)" : "rgba(var(--color-invert-rgb), 0.06)"}`,
+                  color: mode === t.id ? "var(--accent-active-text)" : "rgba(var(--color-invert-rgb), 0.4)",
                 }}>
                 {t.label}
               </button>
@@ -136,12 +137,12 @@ export default function SplitPage() {
           {/* Mode content */}
           {mode === "range" && (
             <div>
-              <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>
+              <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>
                 Page Ranges (comma-separated)
               </label>
               <input className="input-field" value={rangeInput} onChange={e => setRangeInput(e.target.value)}
                 placeholder="e.g. 1-3, 5-7, 10" />
-              <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.25)", marginTop: "6px" }}>
+              <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "6px" }}>
                 Each range becomes a separate PDF. Example: 1-3 → pages 1, 2, 3.
               </p>
             </div>
@@ -149,13 +150,13 @@ export default function SplitPage() {
 
           {mode === "everyN" && (
             <div>
-              <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>
+              <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>
                 Split every N pages
               </label>
               <input className="input-field" type="number" min={1} max={info?.pageCount ?? 999}
                 value={everyN} onChange={e => setEveryN(parseInt(e.target.value) || 1)} />
               {info && (
-                <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.25)", marginTop: "6px" }}>
+                <p style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "6px" }}>
                   Will produce {Math.ceil(info.pageCount / everyN)} files
                 </p>
               )}
@@ -165,14 +166,14 @@ export default function SplitPage() {
           {mode === "extract" && (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
+                <label style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
                   Select pages ({selectedPages.length} selected)
                 </label>
                 <div style={{ display: "flex", gap: "6px" }}>
                   <button onClick={() => setSelectedPages(Array.from({ length: info?.pageCount ?? 0 }, (_, i) => i + 1))}
-                    style={{ fontSize: "10px", color: "#a5b4fc", background: "none", border: "none", cursor: "pointer" }}>All</button>
+                    style={{ fontSize: "10px", color: "var(--accent-active-text)", background: "none", border: "none", cursor: "pointer" }}>All</button>
                   <button onClick={() => setSelectedPages([])}
-                    style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer" }}>None</button>
+                    style={{ fontSize: "10px", color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}>None</button>
                 </div>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", maxHeight: "200px", overflowY: "auto" }}>
@@ -180,9 +181,9 @@ export default function SplitPage() {
                   <button key={p} onClick={() => togglePage(p)}
                     style={{
                       width: "36px", height: "36px", borderRadius: "8px", fontSize: "12px", cursor: "pointer",
-                      background: selectedPages.includes(p) ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.04)",
-                      border: `1px solid ${selectedPages.includes(p) ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.08)"}`,
-                      color: selectedPages.includes(p) ? "#a5b4fc" : "rgba(255,255,255,0.5)",
+                      background: selectedPages.includes(p) ? "rgba(99,102,241,0.25)" : "rgba(var(--color-invert-rgb), 0.04)",
+                      border: `1px solid ${selectedPages.includes(p) ? "rgba(99,102,241,0.5)" : "rgba(var(--color-invert-rgb), 0.08)"}`,
+                      color: selectedPages.includes(p) ? "var(--accent-active-text)" : "rgba(var(--color-invert-rgb), 0.5)",
                     }}>
                     {p}
                   </button>
@@ -194,7 +195,7 @@ export default function SplitPage() {
           {processing && (
             <div>
               <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
-              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", marginTop: "6px", textAlign: "center" }}>Processing... {progress}%</p>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px", textAlign: "center" }}>Processing... {progress}%</p>
             </div>
           )}
 
@@ -208,7 +209,7 @@ export default function SplitPage() {
         {/* RIGHT — Preview */}
         <div className="glass-card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Live Preview</span>
+            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Live Preview</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: "12px", flex: 1 }}>
             {previewData && (

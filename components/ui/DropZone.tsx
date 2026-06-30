@@ -90,10 +90,10 @@ export function DropZone({
           </div>
         )}
         <div>
-          <p className="font-semibold" style={{ color: "rgba(255,255,255,0.8)", fontSize: "16px" }}>
+          <p className="font-semibold" style={{ color: "var(--text-primary)", fontSize: "16px" }}>
             {label}
           </p>
-          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "13px", marginTop: "4px" }}>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", marginTop: "4px" }}>
             {sublabel}
           </p>
         </div>
@@ -102,7 +102,7 @@ export function DropZone({
           style={{
             background: "rgba(99,102,241,0.1)",
             border: "1px solid rgba(99,102,241,0.2)",
-            color: "#a5b4fc",
+            color: "var(--accent-active-text)",
           }}
         >
           Max {maxSizeMB}MB per file

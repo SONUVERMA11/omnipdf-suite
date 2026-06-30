@@ -1,223 +1,343 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { Printer, Upload, Download, BookOpen, Layout } from "lucide-react";
-import { readFileAsArrayBuffer, formatBytes } from "@/lib/pdf/engine";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Printer, Upload, Settings2, FileText, ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
+import { readFileAsArrayBuffer, generatePrintLayout } from "@/lib/pdf/engine";
 import { PDFViewer } from "@/components/ui/PDFViewer";
-import { DropZone } from "@/components/ui/DropZone";
 import { toast } from "@/components/ui/Toaster";
 
-type Layout = "normal" | "2up" | "4up" | "booklet";
-type ColorMode = "color" | "bw";
+type PrintHandling = "scale" | "tile" | "multiple" | "booklet";
 type Orientation = "portrait" | "landscape";
 type PaperSize = "a4" | "letter" | "a3" | "legal";
 
 export default function PrintPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [previewData, setPreviewData] = useState<Uint8Array | null>(null);
-  const [layout, setLayout] = useState<Layout>("normal");
-  const [colorMode, setColorMode] = useState<ColorMode>("color");
+  const [layoutData, setLayoutData] = useState<Uint8Array | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Print Range
+  const [printRange, setPrintRange] = useState<"all" | "current" | "pages">("all");
+  const [pagesInput, setPagesInput] = useState("");
+  const [totalPages, setTotalPages] = useState(0);
+  
+  // Print Handling
+  const [handling, setHandling] = useState<PrintHandling>("multiple");
+  const [pagesPerSheet, setPagesPerSheet] = useState<"2" | "4" | "6" | "9" | "16" | "custom">("4");
+  const [customRows, setCustomRows] = useState(2);
+  const [customCols, setCustomCols] = useState(2);
+  const [pageOrder, setPageOrder] = useState("Horizontal");
+  const [printPageBorder, setPrintPageBorder] = useState(false);
+  const [marginEnabled, setMarginEnabled] = useState(true);
+  const [marginVal, setMarginVal] = useState(5); // mm
+  
+  // Center column
+  const [twoSided, setTwoSided] = useState(true);
+  const [flipEdge, setFlipEdge] = useState<"long" | "short">("long");
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [autoCenter, setAutoCenter] = useState(true);
   const [orientation, setOrientation] = useState<Orientation>("portrait");
-  const [paper, setPaper] = useState<PaperSize>("a4");
+  
+  const [paper, setPaper] = useState<PaperSize>("letter");
   const [copies, setCopies] = useState(1);
-  const [duplex, setDuplex] = useState(false);
-  const [pageRange, setPageRange] = useState("all");
-  const [marginTop, setMarginTop] = useState(10);
-  const [marginBottom, setMarginBottom] = useState(10);
-  const [marginLeft, setMarginLeft] = useState(10);
-  const [marginRight, setMarginRight] = useState(10);
   const printFrameRef = useRef<HTMLIFrameElement>(null);
 
-  const handleFile = useCallback(async (files: File[]) => {
-    const f = files[0];
+  const handleFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
     setFile(f);
     const buf = await readFileAsArrayBuffer(f);
-    setPreviewData(new Uint8Array(buf));
+    setLayoutData(new Uint8Array(buf));
     toast("PDF loaded for printing", "success");
   }, []);
 
-  const handlePrint = () => {
+  // Map to engine options
+  useEffect(() => {
     if (!file) return;
-    const url = URL.createObjectURL(new Blob([previewData!.buffer as ArrayBuffer], { type: "application/pdf" }));
-    const iframe = printFrameRef.current!;
-    iframe.src = url;
-    iframe.onload = () => {
-      try { iframe.contentWindow?.print(); } catch { window.open(url, "_blank"); }
-      URL.revokeObjectURL(url);
+    const generate = async () => {
+      setIsGenerating(true);
+      try {
+        let layout: any = "normal";
+        let customGrid = undefined;
+        
+        if (handling === "multiple") {
+          if (pagesPerSheet === "custom") {
+             layout = "custom";
+             customGrid = { rows: customRows, cols: customCols };
+          } else {
+             const val = Number(pagesPerSheet);
+             layout = val === 2 ? "2up" : val === 4 ? "4up" : "custom";
+             if (layout === "custom") {
+               customGrid = val === 6 ? {rows: 3, cols: 2} : val === 9 ? {rows: 3, cols: 3} : {rows: 4, cols: 4};
+             }
+          }
+        } else if (handling === "booklet") {
+          layout = "booklet";
+        }
+        
+        // Parse pages
+        let pageIndices: number[] | undefined = undefined;
+        if (printRange === "pages" && pagesInput.trim()) {
+           pageIndices = [];
+           const parts = pagesInput.split(",");
+           for (const p of parts) {
+             if (p.includes("-")) {
+               const [s, e] = p.split("-").map(x => parseInt(x.trim()));
+               if (!isNaN(s) && !isNaN(e)) {
+                 for (let i = s; i <= e; i++) pageIndices.push(i - 1);
+               }
+             } else {
+               const num = parseInt(p.trim());
+               if (!isNaN(num)) pageIndices.push(num - 1);
+             }
+           }
+        }
+        
+        const m = marginEnabled ? marginVal : 0;
+        
+        const out = await generatePrintLayout(file, {
+          layout, customGrid, paperSize: paper, orientation,
+          margins: { top: m, bottom: m, left: m, right: m },
+          pageIndices
+        });
+        setLayoutData(out);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+    const t = setTimeout(generate, 500);
+    return () => clearTimeout(t);
+  }, [file, handling, pagesPerSheet, customRows, customCols, marginEnabled, marginVal, paper, orientation, printRange, pagesInput]);
+
+  const handlePrint = () => {
+    if (!layoutData || !printFrameRef.current) return;
+    const url = URL.createObjectURL(new Blob([layoutData.buffer as ArrayBuffer], { type: "application/pdf" }));
+    printFrameRef.current.src = url;
+    printFrameRef.current.onload = () => {
+      try {
+        printFrameRef.current?.contentWindow?.focus();
+        printFrameRef.current?.contentWindow?.print();
+      } catch (e) {
+        // Fallback if iframe print is blocked
+        const w = window.open(url);
+        if (w) w.onload = () => { w.print(); };
+      }
     };
     toast("Opening print dialog...", "info");
   };
 
-  const layouts: { id: Layout; label: string; icon: React.ReactNode; desc: string }[] = [
-    { id: "normal", label: "Normal", icon: "▪", desc: "1 page per sheet" },
-    { id: "2up", label: "2-up", icon: "▪▪", desc: "2 pages per sheet" },
-    { id: "4up", label: "4-up", icon: "▫▫▫▫", desc: "4 pages per sheet" },
-    { id: "booklet", label: "Booklet", icon: "📖", desc: "Fold & staple" },
-  ];
+  const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+    <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-primary)", marginTop: "-8px", padding: "0 4px", background: "var(--bg-primary)", width: "fit-content", position: "relative", zIndex: 1 }}>
+      {children}
+    </div>
+  );
+
+  const Fieldset = ({ title, children, style }: any) => (
+    <div style={{ border: "1px solid rgba(var(--color-invert-rgb), 0.15)", borderRadius: "4px", padding: "12px", position: "relative", marginBottom: "16px", ...style }}>
+      <div style={{ position: "absolute", top: 0, left: "8px", transform: "translateY(-50%)" }}>
+        <SectionTitle>{title}</SectionTitle>
+      </div>
+      {children}
+    </div>
+  );
 
   return (
-    <div style={{ minHeight: "100vh", padding: "32px" }}>
-      <div style={{ marginBottom: "28px" }}>
-        <div className="badge badge-indigo" style={{ marginBottom: "10px" }}>
-          <Printer size={11} /> PRINT STUDIO
-        </div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>Print Studio</h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>
-          Advanced print settings with live WYSIWYG preview. N-up, booklet, duplex support.
-        </p>
+    <div style={{ minHeight: "100vh", padding: "20px", display: "flex", flexDirection: "column", background: "var(--bg-primary)", color: "var(--text-primary)" }}>
+      {/* Header bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", padding: "12px 20px", background: "rgba(var(--color-invert-rgb), 0.03)", border: "1px solid rgba(var(--color-invert-rgb), 0.1)", borderRadius: "8px", marginBottom: "20px" }}>
+        <Printer size={20} color="#8b5cf6" />
+        <span style={{ fontSize: "16px", fontWeight: 600 }}>Print</span>
+        <div style={{ flex: 1 }} />
+        {!file ? (
+          <label className="btn-primary" style={{ cursor: "pointer", padding: "6px 12px", fontSize: "12px" }}>
+            <Upload size={14} style={{ display: "inline", marginRight: "6px" }}/> Open PDF
+            <input type="file" hidden accept=".pdf" onChange={handleFile} />
+          </label>
+        ) : (
+          <div style={{ padding: "4px 12px", background: "rgba(99,102,241,0.2)", borderRadius: "6px", fontSize: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+             <FileText size={14} color="var(--accent-active-text)" />
+             <span>{file.name}</span>
+             <button onClick={() => { setFile(null); setLayoutData(null); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "11px", marginLeft: "10px" }}>Remove</button>
+          </div>
+        )}
+        <button className="btn-primary" onClick={handlePrint} disabled={!file} style={{ padding: "6px 20px" }}>OK</button>
+        <button className="btn-secondary" style={{ padding: "6px 20px" }}>Cancel</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: "20px", minHeight: "calc(100vh - 200px)" }}>
-        {/* Controls */}
-        <div className="glass-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "14px", overflowY: "auto" }}>
-          {!file ? (
-            <DropZone onFiles={handleFile} accept=".pdf" multiple={false} label="Drop PDF to print" icon={<Upload size={22} color="#8b5cf6" />} />
-          ) : (
-            <div style={{ padding: "10px 12px", borderRadius: "10px", background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)", fontSize: "12px" }}>
-              <div style={{ color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>{file.name}</div>
-              <div style={{ color: "rgba(255,255,255,0.3)" }}>{formatBytes(file.size)}</div>
-              <button onClick={() => { setFile(null); setPreviewData(null); }} style={{ marginTop: "4px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "11px" }}>Remove</button>
-            </div>
-          )}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(300px, 1fr) minmax(200px, 280px) minmax(350px, 450px)", gap: "20px", flex: 1, alignItems: "start" }}>
+        
+        {/* Left Column */}
+        <div>
+          {/* Top Row: Printer Name & Copies */}
+          <div style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", width: "50px" }}>Name:</span>
+            <select className="select-field" style={{ flex: 1, padding: "4px 8px", fontSize: "13px" }}>
+              <option>Browser Default Printer</option>
+              <option>Save as PDF</option>
+            </select>
+            <button className="btn-secondary" style={{ padding: "4px 12px", fontSize: "12px" }}>Properties</button>
+          </div>
+          <div style={{ display: "flex", gap: "12px", marginBottom: "20px", alignItems: "center" }}>
+            <span style={{ fontSize: "13px", width: "50px" }}>Copies:</span>
+            <input type="number" min={1} value={copies} onChange={e => setCopies(Number(e.target.value))} className="input-field" style={{ width: "60px", padding: "4px", fontSize: "13px" }} />
+            <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", marginLeft: "12px" }}>
+              <input type="checkbox" defaultChecked /> Collate
+            </label>
+            <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto" }}>
+              <input type="checkbox" /> Print as grayscale
+            </label>
+          </div>
 
-          {/* Layout */}
-          <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Layout</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-              {layouts.map(l => (
-                <button key={l.id} onClick={() => setLayout(l.id)} style={{
-                  padding: "10px", borderRadius: "10px", cursor: "pointer", textAlign: "left",
-                  background: layout === l.id ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${layout === l.id ? "rgba(99,102,241,0.35)" : "rgba(255,255,255,0.06)"}`,
+          <Fieldset title="Print Range">
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <input type="radio" checked={printRange === "all"} onChange={() => setPrintRange("all")} /> All pages
+              </label>
+              <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <input type="radio" checked={printRange === "current"} onChange={() => setPrintRange("current")} /> Current view
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input type="radio" checked={printRange === "pages"} onChange={() => setPrintRange("pages")} /> Pages:
+                </label>
+                <input type="text" className="input-field" value={pagesInput} onChange={e => {setPagesInput(e.target.value); setPrintRange("pages");}} placeholder="e.g. 1-5, 8" style={{ flex: 1, padding: "4px 8px", fontSize: "13px" }} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "4px" }}>
+                <span style={{ fontSize: "13px" }}>Subset:</span>
+                <select className="select-field" style={{ flex: 1, padding: "4px", fontSize: "12px" }}><option>All pages in range</option><option>Odd pages only</option><option>Even pages only</option></select>
+              </div>
+            </div>
+          </Fieldset>
+
+          <Fieldset title="Print Handling">
+            <div style={{ display: "flex", gap: "4px", marginBottom: "16px" }}>
+              {(["scale", "tile", "multiple", "booklet"] as const).map(mode => (
+                <button key={mode} onClick={() => setHandling(mode)} style={{
+                  flex: 1, padding: "6px 0", fontSize: "11px", textAlign: "center", borderRadius: "4px",
+                  background: handling === mode ? "rgba(99,102,241,0.2)" : "transparent",
+                  border: `1px solid ${handling === mode ? "#8b5cf6" : "rgba(var(--color-invert-rgb), 0.2)"}`,
+                  color: handling === mode ? "white" : "rgba(var(--color-invert-rgb), 0.7)",
                 }}>
-                  <div style={{ fontSize: "14px", marginBottom: "2px" }}>{l.icon}</div>
-                  <div style={{ fontSize: "12px", fontWeight: 600, color: layout === l.id ? "#a5b4fc" : "rgba(255,255,255,0.6)" }}>{l.label}</div>
-                  <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)" }}>{l.desc}</div>
+                  {mode === "scale" ? "Scale" : mode === "tile" ? "Tile Pages" : mode === "multiple" ? "Multiple Pages" : "Booklet"}
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Paper & Orientation */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            <div>
-              <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" }}>Paper Size</label>
-              <select className="select-field" value={paper} onChange={e => setPaper(e.target.value as PaperSize)} style={{ width: "100%" }}>
-                {["a4", "letter", "a3", "legal"].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" }}>Copies</label>
-              <input className="input-field" type="number" min={1} max={999} value={copies} onChange={e => setCopies(Number(e.target.value))} />
-            </div>
-          </div>
-
-          {/* Orientation */}
-          <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>Orientation</label>
-            <div style={{ display: "flex", gap: "6px" }}>
-              {(["portrait", "landscape"] as const).map(o => (
-                <button key={o} onClick={() => setOrientation(o)} style={{
-                  flex: 1, padding: "9px", borderRadius: "10px", fontSize: "12px", cursor: "pointer", textTransform: "capitalize",
-                  background: orientation === o ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${orientation === o ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`,
-                  color: orientation === o ? "#a5b4fc" : "rgba(255,255,255,0.4)",
-                }}>{o === "portrait" ? "⬜ Portrait" : "⬛ Landscape"}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Color mode */}
-          <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>Color Mode</label>
-            <div style={{ display: "flex", gap: "6px" }}>
-              {(["color", "bw"] as const).map(c => (
-                <button key={c} onClick={() => setColorMode(c)} style={{
-                  flex: 1, padding: "9px", borderRadius: "10px", fontSize: "12px", cursor: "pointer",
-                  background: colorMode === c ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${colorMode === c ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`,
-                  color: colorMode === c ? "#a5b4fc" : "rgba(255,255,255,0.4)",
-                }}>{c === "color" ? "🎨 Color" : "⬛ B&W"}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Duplex */}
-          <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
-            <input type="checkbox" checked={duplex} onChange={e => setDuplex(e.target.checked)} />
-            <div>
-              <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>Duplex (Double-sided)</div>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>Print on both sides</div>
-            </div>
-          </label>
-
-          {/* Page Range */}
-          <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" }}>Page Range</label>
-            <input className="input-field" value={pageRange} onChange={e => setPageRange(e.target.value)} placeholder="all or 1-5, 8" />
-          </div>
-
-          {/* Margins */}
-          <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>Margins (mm)</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "6px" }}>
-              {[["Top", marginTop, setMarginTop], ["Bottom", marginBottom, setMarginBottom], ["Left", marginLeft, setMarginLeft], ["Right", marginRight, setMarginRight]].map(([label, val, setter]: any) => (
-                <div key={label as string}>
-                  <label style={{ fontSize: "9px", color: "rgba(255,255,255,0.3)", display: "block", marginBottom: "3px" }}>{label}</label>
-                  <input className="input-field" type="number" min={0} max={50} value={val} onChange={e => setter(Number(e.target.value))} style={{ padding: "8px", textAlign: "center" }} />
+            {handling === "multiple" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "13px", width: "110px" }}>Pages per sheet:</span>
+                  <select className="select-field" value={pagesPerSheet} onChange={e => setPagesPerSheet(e.target.value as any)} style={{ flex: 1, padding: "4px", fontSize: "12px" }}>
+                    <option value="2">2</option>
+                    <option value="4">4</option>
+                    <option value="6">6</option>
+                    <option value="9">9</option>
+                    <option value="16">16</option>
+                    <option value="custom">Custom...</option>
+                  </select>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "auto" }}>
-            <button className="btn-primary" onClick={handlePrint} disabled={!file}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: !file ? 0.4 : 1 }}>
-              <Printer size={16} /> Print Now
-            </button>
-          </div>
-        </div>
-
-        {/* Live preview */}
-        <div className="glass-card" style={{ padding: "16px", display: "flex", flexDirection: "column" }}>
-          <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Print Preview</span>
-            <div style={{ marginLeft: "auto", display: "flex", gap: "6px", fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>
-              <span className="badge badge-indigo">{paper.toUpperCase()}</span>
-              <span className="badge badge-indigo">{orientation}</span>
-              <span className="badge badge-indigo">{layout}</span>
-              <span className="badge badge-indigo">{copies}×</span>
-              {duplex && <span className="badge badge-green">Duplex</span>}
-            </div>
-          </div>
-
-          {/* Print layout preview */}
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.2)", borderRadius: "12px", padding: "20px" }}>
-            {previewData ? (
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: layout === "4up" ? "1fr 1fr" : layout === "2up" ? "1fr 1fr" : "1fr",
-                gap: "8px",
-                width: orientation === "landscape" ? "560px" : "400px",
-                filter: colorMode === "bw" ? "grayscale(1)" : "none",
-              }}>
-                {Array.from({ length: layout === "4up" ? 4 : layout === "2up" ? 2 : 1 }).map((_, i) => (
-                  <div key={i} style={{ border: "1px solid rgba(255,255,255,0.1)", borderRadius: "4px", overflow: "hidden", background: "white", minHeight: "120px" }}>
-                    <PDFViewer data={previewData} pageNumber={i + 1} showControls={false} scale={0.4} />
+                {pagesPerSheet === "custom" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "122px" }}>
+                    <input type="number" min={1} max={10} value={customCols} onChange={e => setCustomCols(Number(e.target.value))} className="input-field" style={{ width: "40px", padding: "4px", fontSize: "12px", textAlign: "center" }} />
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>by</span>
+                    <input type="number" min={1} max={10} value={customRows} onChange={e => setCustomRows(Number(e.target.value))} className="input-field" style={{ width: "40px", padding: "4px", fontSize: "12px", textAlign: "center" }} />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: "13px" }}>
-                Upload a PDF to see print preview
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "13px", width: "110px" }}>Page Order:</span>
+                  <select className="select-field" value={pageOrder} onChange={e => setPageOrder(e.target.value)} style={{ flex: 1, padding: "4px", fontSize: "12px" }}>
+                    <option>Horizontal</option>
+                    <option>Horizontal Reversed</option>
+                    <option>Vertical</option>
+                  </select>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px", width: "110px" }}>
+                    <input type="checkbox" checked={marginEnabled} onChange={e => setMarginEnabled(e.target.checked)} /> Margins:
+                  </label>
+                  <input type="number" min={0} value={marginVal} onChange={e => setMarginVal(Number(e.target.value))} disabled={!marginEnabled} className="input-field" style={{ width: "60px", padding: "4px", fontSize: "12px" }} />
+                  <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>mm</span>
+                </div>
+                <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input type="checkbox" checked={printPageBorder} onChange={e => setPrintPageBorder(e.target.checked)} /> Print Page Border
+                </label>
               </div>
             )}
-          </div>
+            
+            {handling !== "multiple" && (
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)", textAlign: "center", padding: "20px 0" }}>
+                {handling.toUpperCase()} settings active
+              </div>
+            )}
+          </Fieldset>
         </div>
-      </div>
 
-      {/* Hidden print iframe */}
-      <iframe ref={printFrameRef} style={{ display: "none" }} title="print-frame" />
+        {/* Middle Column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
+          <Fieldset title="" style={{ marginTop: "10px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px", fontWeight: 600 }}>
+                <input type="checkbox" checked={twoSided} onChange={e => setTwoSided(e.target.checked)} /> Print on both sides of paper
+              </label>
+              <div style={{ paddingLeft: "24px", display: "flex", flexDirection: "column", gap: "6px", opacity: twoSided ? 1 : 0.4, pointerEvents: twoSided ? "auto" : "none" }}>
+                <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input type="radio" checked={flipEdge === "long"} onChange={() => setFlipEdge("long")} /> Flip on long edge
+                </label>
+                <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input type="radio" checked={flipEdge === "short"} onChange={() => setFlipEdge("short")} /> Flip on short edge
+                </label>
+              </div>
+              <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+                <input type="checkbox" checked={autoRotate} onChange={e => setAutoRotate(e.target.checked)} /> Auto-Rotate
+              </label>
+              <label style={{ fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <input type="checkbox" checked={autoCenter} onChange={e => setAutoCenter(e.target.checked)} /> Auto-Center
+              </label>
+            </div>
+          </Fieldset>
+
+          <Fieldset title="Orientation">
+            <select className="select-field" value={orientation} onChange={e => setOrientation(e.target.value as any)} style={{ width: "100%", padding: "6px", fontSize: "13px" }}>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </Fieldset>
+
+          <Fieldset title="Paper Size">
+            <select className="select-field" value={paper} onChange={e => setPaper(e.target.value as any)} style={{ width: "100%", padding: "6px", fontSize: "13px" }}>
+              <option value="letter">Letter</option>
+              <option value="a4">A4</option>
+              <option value="legal">Legal</option>
+              <option value="a3">A3</option>
+            </select>
+          </Fieldset>
+        </div>
+
+        {/* Right Column: Preview */}
+        <Fieldset title="Preview" style={{ height: "100%", display: "flex", flexDirection: "column", padding: "4px" }}>
+          <div style={{ padding: "4px 8px", fontSize: "11px", color: "var(--text-primary)", display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(var(--color-invert-rgb), 0.1)", marginBottom: "8px" }}>
+            <span>Zoom: 100%</span>
+            <span>Paper: {paper.toUpperCase()}</span>
+          </div>
+          <div style={{ flex: 1, position: "relative", background: "rgba(var(--color-obverse-rgb), 0.3)", borderRadius: "4px", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "400px" }}>
+            {isGenerating && (
+              <div style={{ position: "absolute", inset: 0, zIndex: 10, background: "rgba(10,10,18,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="spinner" />
+              </div>
+            )}
+            {layoutData ? (
+              <div style={{ width: "100%", height: "100%" }}>
+                <PDFViewer data={layoutData} showControls={true} scale={0.7} onPageCount={setTotalPages} />
+              </div>
+            ) : (
+              <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Open a PDF to preview</div>
+            )}
+          </div>
+        </Fieldset>
+
+      </div>
+      <iframe ref={printFrameRef} style={{ display: "none" }} title="Print Frame" />
     </div>
   );
 }

@@ -3,7 +3,7 @@
  * Built on pdf-lib (WASM/JS). Zero server round-trips for full privacy.
  */
 
-import { PDFDocument, degrees, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, degrees, rgb, StandardFonts, BlendMode } from "pdf-lib";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -136,16 +136,18 @@ export interface CropBox { x: number; y: number; width: number; height: number; 
 
 export async function cropPDF(
   file: File,
-  cropBoxes: Record<number, CropBox> | CropBox,
-  applyToAll = false
+  cropBox: CropBox,
+  targetPages: "all" | number[] = "all"
 ): Promise<Uint8Array> {
   const bytes = await readFileAsArrayBuffer(file);
   const doc = await PDFDocument.load(bytes);
+  
+  const targetSet = targetPages === "all" ? null : new Set(targetPages.map(p => p - 1));
+
   doc.getPages().forEach((page, i) => {
-    const box = applyToAll ? (cropBoxes as CropBox) : ((cropBoxes as Record<number, CropBox>)[i] ?? null);
-    if (!box) return;
-    page.setCropBox(box.x, box.y, box.width, box.height);
-    page.setMediaBox(box.x, box.y, box.width, box.height);
+    if (targetSet && !targetSet.has(i)) return;
+    page.setCropBox(cropBox.x, cropBox.y, cropBox.width, cropBox.height);
+    page.setMediaBox(cropBox.x, cropBox.y, cropBox.width, cropBox.height);
   });
   return doc.save();
 }
@@ -162,6 +164,16 @@ export async function compressPDF(file: File, level: CompressionLevel = "medium"
     doc.setKeywords([]); doc.setCreator("OmniPDF"); doc.setProducer("OmniPDF");
   }
   return doc.save({ useObjectStreams: level !== "low", addDefaultPage: false });
+}
+
+// ─── Repair ────────────────────────────────────────────────────────────
+
+export async function repairPDF(file: File): Promise<Uint8Array> {
+  const bytes = await readFileAsArrayBuffer(file);
+  // pdf-lib's load implicitly repairs malformed cross-reference tables
+  // ignoreEncryption allows reading files with empty passwords that trip some parsers
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  return doc.save();
 }
 
 // ─── Watermark ───────────────────────────────────────────────────────────
@@ -346,4 +358,127 @@ export async function addTextAnnotations(file: File, annotations: TextAnnotation
     page.drawText(ann.text, { x: ann.x, y: ann.y, size: ann.fontSize, font, color: rgb(r, g, b) });
   }
   return doc.save();
+}
+
+// ─── Invert Colors ───────────────────────────────────────────────────────
+
+export async function invertPDF(file: File): Promise<Uint8Array> {
+  const bytes = await readFileAsArrayBuffer(file);
+  const doc = await PDFDocument.load(bytes);
+  
+  doc.getPages().forEach((page) => {
+    const { width, height } = page.getSize();
+    page.drawRectangle({
+      x: 0,
+      y: 0,
+      width,
+      height,
+      color: rgb(1, 1, 1),
+      blendMode: BlendMode.Difference,
+    });
+  });
+  
+  return doc.save();
+}
+
+// ─── Print Layout Generator ──────────────────────────────────────────────
+
+export interface PrintOptions {
+  layout: "normal" | "2up" | "4up" | "booklet" | "custom";
+  customGrid?: { rows: number; cols: number };
+  paperSize: "a4" | "letter" | "a3" | "legal";
+  orientation: "portrait" | "landscape";
+  margins: { top: number; bottom: number; left: number; right: number };
+  pageIndices?: number[]; // Array of 0-based page indices to print
+}
+
+export async function generatePrintLayout(file: File, opts: PrintOptions): Promise<Uint8Array> {
+  const bytes = await readFileAsArrayBuffer(file);
+  const srcDoc = await PDFDocument.load(bytes);
+  const destDoc = await PDFDocument.create();
+  
+  const mmToPt = 2.83465;
+  const margins = {
+    t: opts.margins.top * mmToPt,
+    b: opts.margins.bottom * mmToPt,
+    l: opts.margins.left * mmToPt,
+    r: opts.margins.right * mmToPt,
+  };
+
+  const sizes: any = { a4: [595, 842], letter: [612, 792], a3: [842, 1191], legal: [612, 1008] };
+  let [pw, ph] = sizes[opts.paperSize];
+  if (opts.orientation === "landscape") { [pw, ph] = [ph, pw]; }
+
+  const totalSrcPages = srcDoc.getPageCount();
+  const targetIndices = opts.pageIndices || Array.from({ length: totalSrcPages }, (_, i) => i);
+  // Filter out invalid indices
+  const validIndices = targetIndices.filter(i => i >= 0 && i < totalSrcPages);
+  
+  if (validIndices.length === 0) {
+    // If no valid pages, just return an empty page so it doesn't crash
+    destDoc.addPage([pw, ph]);
+    return destDoc.save();
+  }
+
+  // embedPdf only takes unique indices to embed. 
+  // If the user wants page [0, 0, 0, 0], we embed [0] once, and reference it 4 times.
+  const uniqueIndices = Array.from(new Set(validIndices));
+  const embeddedPages = await destDoc.embedPdf(srcDoc, uniqueIndices);
+  
+  // Map index back to embedded page
+  const embedMap = new Map();
+  uniqueIndices.forEach((idx, i) => embedMap.set(idx, embeddedPages[i]));
+
+  const pagesToDraw = validIndices.map(idx => embedMap.get(idx));
+
+  const drawPages = (pageArr: any[], layoutRows: number, layoutCols: number) => {
+    let i = 0;
+    while (i < pageArr.length) {
+      const page = destDoc.addPage([pw, ph]);
+      const contentW = pw - margins.l - margins.r;
+      const contentH = ph - margins.t - margins.b;
+      const cellW = contentW / layoutCols;
+      const cellH = contentH / layoutRows;
+
+      for (let r = 0; r < layoutRows; r++) {
+        for (let c = 0; c < layoutCols; c++) {
+          if (i >= pageArr.length) break;
+          const ep = pageArr[i++];
+          if (!ep) continue;
+
+          const scale = Math.min(cellW / ep.width, cellH / ep.height);
+          const scaledW = ep.width * scale;
+          const scaledH = ep.height * scale;
+          const x = margins.l + (c * cellW) + (cellW - scaledW) / 2;
+          const y = ph - margins.t - (r * cellH) - cellH + (cellH - scaledH) / 2;
+          page.drawPage(ep, { x, y, width: scaledW, height: scaledH });
+        }
+      }
+    }
+  };
+
+  if (opts.layout === "normal") drawPages(pagesToDraw, 1, 1);
+  else if (opts.layout === "2up") {
+    if (opts.orientation === "portrait") drawPages(pagesToDraw, 2, 1);
+    else drawPages(pagesToDraw, 1, 2);
+  } else if (opts.layout === "4up") {
+    drawPages(pagesToDraw, 2, 2);
+  } else if (opts.layout === "custom" && opts.customGrid) {
+    drawPages(pagesToDraw, opts.customGrid.rows, opts.customGrid.cols);
+  } else if (opts.layout === "booklet") {
+    const padded = [...pagesToDraw];
+    while (padded.length % 4 !== 0) padded.push(null as any);
+    const total = padded.length;
+    const ordered = [];
+    for (let i = 0; i < total / 2; i += 2) {
+      ordered.push(padded[total - 1 - i]); 
+      ordered.push(padded[i]);             
+      ordered.push(padded[i + 1]);         
+      ordered.push(padded[total - 2 - i]); 
+    }
+    if (opts.orientation === "portrait") drawPages(ordered, 2, 1);
+    else drawPages(ordered, 1, 2);
+  }
+
+  return destDoc.save();
 }

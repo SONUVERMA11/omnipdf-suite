@@ -1,0 +1,20 @@
+# ─── Render.com Deployment Configuration ─────────────────────────────────────
+# Deploy via: connect GitHub repo → auto-detects render.yaml
+# Free tier: 750 hours/month, spins down after 15 min inactivity
+
+services:
+  - type: web
+    name: omnipdf-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: CORS_ORIGIN
+        value: "*"

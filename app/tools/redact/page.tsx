@@ -51,8 +51,8 @@ export default function RedactPage() {
         <div className="badge" style={{ marginBottom: "10px", background: "rgba(239,68,68,0.15)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.25)", display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 12px", borderRadius: "999px", fontSize: "12px" }}>
           <X size={11} /> REDACT PDF
         </div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>Redact PDF</h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>Permanently black-out sensitive information. This cannot be undone.</p>
+        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Redact PDF</h1>
+        <p style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "14px" }}>Permanently black-out sensitive information. This cannot be undone.</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: "20px", minHeight: "calc(100vh - 200px)" }}>
@@ -61,24 +61,24 @@ export default function RedactPage() {
             <DropZone onFiles={handleFile} accept=".pdf" multiple={false} label="Drop PDF here" icon={<Upload size={22} color="#ef4444" />} />
           ) : (
             <div style={{ padding: "10px 12px", borderRadius: "10px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", fontSize: "12px" }}>
-              <div style={{ color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>{file.name}</div>
-              <div style={{ color: "rgba(255,255,255,0.3)" }}>{formatBytes(file.size)}</div>
+              <div style={{ color: "var(--text-primary)", fontWeight: 500 }}>{file.name}</div>
+              <div style={{ color: "var(--text-muted)" }}>{formatBytes(file.size)}</div>
               <button onClick={() => { setFile(null); setPreviewData(null); setBoxes([]); }} style={{ marginTop: "4px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "11px" }}>Remove</button>
             </div>
           )}
 
           <div style={{ padding: "12px", borderRadius: "12px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", display: "flex", gap: "10px", alignItems: "flex-start" }}>
             <AlertTriangle size={14} color="#f59e0b" style={{ flexShrink: 0, marginTop: "2px" }} />
-            <p style={{ fontSize: "11px", color: "#fcd34d", lineHeight: 1.5 }}>Redaction is <strong>permanent</strong>. The blacked-out content cannot be recovered.</p>
+            <p style={{ fontSize: "11px", color: "var(--accent-orange)", lineHeight: 1.5 }}>Redaction is <strong>permanent</strong>. The blacked-out content cannot be recovered.</p>
           </div>
 
           <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>Add Redaction Box — Page {currentPage}</label>
+            <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>Add Redaction Box — Page {currentPage}</label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-              <div><label style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)" }}>X</label><input className="input-field" type="number" value={mx} onChange={e => setMx(Number(e.target.value))} /></div>
-              <div><label style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)" }}>Y</label><input className="input-field" type="number" value={my} onChange={e => setMy(Number(e.target.value))} /></div>
-              <div><label style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)" }}>Width</label><input className="input-field" type="number" value={mw} onChange={e => setMw(Number(e.target.value))} /></div>
-              <div><label style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)" }}>Height</label><input className="input-field" type="number" value={mh} onChange={e => setMh(Number(e.target.value))} /></div>
+              <div><label style={{ fontSize: "10px", color: "var(--text-muted)" }}>X</label><input className="input-field" type="number" value={mx} onChange={e => setMx(Number(e.target.value))} /></div>
+              <div><label style={{ fontSize: "10px", color: "var(--text-muted)" }}>Y</label><input className="input-field" type="number" value={my} onChange={e => setMy(Number(e.target.value))} /></div>
+              <div><label style={{ fontSize: "10px", color: "var(--text-muted)" }}>Width</label><input className="input-field" type="number" value={mw} onChange={e => setMw(Number(e.target.value))} /></div>
+              <div><label style={{ fontSize: "10px", color: "var(--text-muted)" }}>Height</label><input className="input-field" type="number" value={mh} onChange={e => setMh(Number(e.target.value))} /></div>
             </div>
             <button onClick={addBox} style={{ marginTop: "10px", width: "100%", padding: "10px", borderRadius: "10px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", cursor: "pointer", fontSize: "13px", fontWeight: 500 }}>
               + Add Box on Page {currentPage}
@@ -87,13 +87,13 @@ export default function RedactPage() {
 
           {boxes.length > 0 && (
             <div>
-              <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>
+              <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>
                 Redaction Areas ({boxes.length})
               </label>
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "200px", overflowY: "auto" }}>
                 {boxes.map((b, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "8px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)" }}>
-                    <div style={{ flex: 1, fontSize: "11px", color: "rgba(255,255,255,0.5)" }}>
+                    <div style={{ flex: 1, fontSize: "11px", color: "var(--text-secondary)" }}>
                       Page {b.pageIndex + 1} · x:{b.x} y:{b.y} {b.width}×{b.height}
                     </div>
                     <button onClick={() => setBoxes(p => p.filter((_, j) => j !== i))}
@@ -114,7 +114,7 @@ export default function RedactPage() {
         </div>
 
         <div className="glass-card" style={{ padding: "16px" }}>
-          <div style={{ marginBottom: "12px", fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>PDF Preview</div>
+          <div style={{ marginBottom: "12px", fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>PDF Preview</div>
           <PDFViewer data={previewData} pageNumber={currentPage} onPageCount={() => {}} showControls={true} />
         </div>
       </div>

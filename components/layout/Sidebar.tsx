@@ -9,7 +9,7 @@ import {
   Scan, Printer, Search, Edit3, PenTool, Crop, AlignLeft,
   BarChart2, ChevronLeft, ChevronRight, Zap, Home,
   BookOpen, Layers, RefreshCw, Shield, Type, FileSearch,
-  Maximize2, SlidersHorizontal, Camera, Settings, X, FileSignature
+  Maximize2, SlidersHorizontal, Camera, Settings, X, FileSignature, Contrast
 } from "lucide-react";
 
 const toolGroups = [
@@ -33,7 +33,7 @@ const toolGroups = [
     label: "Optimize",
     items: [
       { label: "Compress PDF", href: "/tools/compress", icon: Minimize2, color: "#10b981" },
-      { label: "Repair PDF", href: "/tools/compress?mode=repair", icon: RefreshCw, color: "#34d399" },
+      { label: "Repair PDF", href: "/tools/repair", icon: RefreshCw, color: "#34d399" },
     ],
   },
   {
@@ -52,6 +52,7 @@ const toolGroups = [
     items: [
       { label: "Edit PDF", href: "/tools/edit", icon: Edit3, color: "#6366f1" },
       { label: "Annotate", href: "/tools/edit?mode=annotate", icon: PenTool, color: "#a78bfa" },
+      { label: "Invert Colors", href: "/tools/invert", icon: Contrast, color: "#f8fafc" },
       { label: "Redact", href: "/tools/redact", icon: X, color: "#ef4444" },
       { label: "Watermark", href: "/tools/watermark", icon: Droplets, color: "#06b6d4" },
       { label: "Add Page Numbers", href: "/tools/edit?mode=pagenumbers", icon: BookOpen, color: "#0ea5e9" },
@@ -88,20 +89,22 @@ export function Sidebar() {
 
   return (
     <aside
-      className="relative flex-shrink-0 h-screen flex flex-col overflow-hidden transition-all duration-300"
+      className="relative flex-shrink-0 h-screen flex flex-col overflow-hidden transition-all duration-500 ease-in-out border-r"
       style={{
-        width: collapsed ? "64px" : "240px",
-        background: "rgba(10, 10, 18, 0.9)",
-        borderRight: "1px solid rgba(255,255,255,0.06)",
-        backdropFilter: "blur(20px)",
+        width: collapsed ? "72px" : "260px",
+        background: "var(--bg-secondary)",
+        borderColor: "rgba(255,255,255,0.05)",
+        backdropFilter: "blur(40px)",
+        boxShadow: collapsed ? "none" : "4px 0 24px rgba(0,0,0,0.2)",
         position: "sticky",
         top: 0,
+        zIndex: 50,
       }}
     >
       {/* Logo */}
       <div
         className="flex items-center gap-3 px-4 py-5"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+        style={{ borderBottom: "1px solid var(--glass-border)" }}
       >
         <div
           className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
@@ -110,12 +113,15 @@ export function Sidebar() {
             boxShadow: "0 0 20px rgba(99,102,241,0.4)",
           }}
         >
-          <Zap size={18} color="white" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
         {!collapsed && (
           <div>
-            <div className="font-bold text-white text-sm leading-tight">OmniPDF</div>
-            <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>
+            <div className="font-bold text-sm leading-tight" style={{ color: "var(--text-primary)" }}>OmniPDF</div>
+            <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
               Suite v1.0
             </div>
           </div>
@@ -129,7 +135,7 @@ export function Sidebar() {
             {!collapsed && (
               <div
                 className="px-3 py-1.5 text-xs font-semibold uppercase tracking-widest"
-                style={{ color: "rgba(255,255,255,0.25)" }}
+                style={{ color: "var(--text-muted)" }}
               >
                 {group.label}
               </div>
@@ -146,7 +152,7 @@ export function Sidebar() {
                     ...(isActive
                       ? {
                           background: "rgba(99,102,241,0.12)",
-                          color: (item as any).color || "#a5b4fc",
+                          color: (item as any).color || "var(--accent-active-text)",
                           borderLeft: `2px solid ${(item as any).color || "#6366f1"}`,
                           paddingLeft: "12px",
                         }
@@ -175,16 +181,17 @@ export function Sidebar() {
       {/* Collapse button */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center m-2 rounded-xl transition-all duration-200"
+        className="flex items-center justify-center m-3 rounded-xl transition-all duration-300 hover:bg-white/10"
         style={{
-          height: "36px",
+          height: "40px",
           border: "1px solid rgba(255,255,255,0.08)",
           background: "rgba(255,255,255,0.03)",
-          color: "rgba(255,255,255,0.4)",
+          color: "var(--text-secondary)",
           cursor: "pointer",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
         }}
       >
-        {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
       </button>
     </aside>
   );

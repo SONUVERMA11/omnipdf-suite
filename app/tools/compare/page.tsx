@@ -11,6 +11,7 @@ export default function ComparePage() {
   const [dataB, setDataB] = useState<Uint8Array | null>(null);
   const [nameA, setNameA] = useState(""); const [nameB, setNameB] = useState("");
   const [page, setPage] = useState(1);
+  const [maxPages, setMaxPages] = useState(0);
 
   const loadA = useCallback(async (files: File[]) => {
     const buf = await readFileAsArrayBuffer(files[0]);
@@ -27,24 +28,26 @@ export default function ComparePage() {
     <div style={{ minHeight: "100vh", padding: "32px" }}>
       <div style={{ marginBottom: "28px" }}>
         <div className="badge badge-indigo" style={{ marginBottom: "10px" }}><SlidersHorizontal size={11} /> COMPARE PDFs</div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white" }}>Compare PDFs</h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>View two PDFs side by side with synchronized navigation.</p>
+        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)" }}>Compare PDFs</h1>
+        <p style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "14px" }}>View two PDFs side by side with synchronized navigation.</p>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
         <div className="glass-card" style={{ padding: "16px" }}>
-          <div style={{ marginBottom: "10px", fontSize: "12px", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>PDF A {nameA && `— ${nameA}`}</div>
-          {!dataA ? <DropZone onFiles={loadA} accept=".pdf" multiple={false} label="Drop PDF A" icon={<Upload size={20} color="#6366f1" />} /> : <PDFViewer data={dataA} pageNumber={page} onPageCount={() => {}} showControls={true} />}
+          <div style={{ marginBottom: "10px", fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>PDF A {nameA && `— ${nameA}`}</div>
+          {!dataA ? <DropZone onFiles={loadA} accept=".pdf" multiple={false} label="Drop PDF A" icon={<Upload size={20} color="#6366f1" />} /> 
+            : <PDFViewer data={dataA} pageNumber={page} onPageCount={c => setMaxPages(m => Math.max(m, c))} showControls={false} />}
         </div>
         <div className="glass-card" style={{ padding: "16px" }}>
-          <div style={{ marginBottom: "10px", fontSize: "12px", color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>PDF B {nameB && `— ${nameB}`}</div>
-          {!dataB ? <DropZone onFiles={loadB} accept=".pdf" multiple={false} label="Drop PDF B" icon={<Upload size={20} color="#8b5cf6" />} /> : <PDFViewer data={dataB} pageNumber={page} onPageCount={() => {}} showControls={true} />}
+          <div style={{ marginBottom: "10px", fontSize: "12px", color: "var(--text-secondary)", fontWeight: 600 }}>PDF B {nameB && `— ${nameB}`}</div>
+          {!dataB ? <DropZone onFiles={loadB} accept=".pdf" multiple={false} label="Drop PDF B" icon={<Upload size={20} color="#8b5cf6" />} /> 
+            : <PDFViewer data={dataB} pageNumber={page} onPageCount={c => setMaxPages(m => Math.max(m, c))} showControls={false} />}
         </div>
       </div>
       {dataA && dataB && (
-        <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "16px", alignItems: "center" }}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} className="btn-secondary" style={{ padding: "8px 16px" }}>← Prev</button>
-          <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "13px" }}>Page {page}</span>
-          <button onClick={() => setPage(p => p + 1)} className="btn-secondary" style={{ padding: "8px 16px" }}>Next →</button>
+        <div style={{ display: "flex", justifyContent: "center", gap: "16px", marginTop: "16px", alignItems: "center" }}>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} className="btn-secondary" style={{ padding: "10px 20px" }} disabled={page <= 1}>← Previous</button>
+          <span style={{ color: "var(--text-primary)", fontSize: "14px", fontWeight: 600 }}>Page {page} {maxPages > 0 && `of ${maxPages}`}</span>
+          <button onClick={() => setPage(p => p + 1)} className="btn-secondary" style={{ padding: "10px 20px" }} disabled={page >= maxPages && maxPages > 0}>Next →</button>
         </div>
       )}
     </div>

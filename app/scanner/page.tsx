@@ -23,12 +23,21 @@ export default function ScannerPage() {
   const [captures, setCaptures] = useState<string[]>([]);
   const [processing, setProcessing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false);
 
   const startCamera = async () => {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-      });
+      let s;
+      try {
+        s = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        });
+      } catch (err) {
+        // Fallback for desktop cameras which don't support environment facingMode
+        s = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
+        });
+      }
       setStream(s);
       if (videoRef.current) {
         videoRef.current.srcObject = s;
@@ -36,7 +45,7 @@ export default function ScannerPage() {
       }
       setCameraError(null);
     } catch (e: any) {
-      setCameraError(e.message || "Camera access denied");
+      setCameraError(e.message || "Camera access denied or no camera found");
     }
   };
 
@@ -48,6 +57,9 @@ export default function ScannerPage() {
   useEffect(() => () => { stopCamera(); }, []);
 
   const capture = () => {
+    setFlash(true);
+    setTimeout(() => setFlash(false), 150);
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -95,8 +107,8 @@ export default function ScannerPage() {
         <div className="badge badge-indigo" style={{ marginBottom: "10px" }}>
           <Camera size={11} /> DOCUMENT SCANNER
         </div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>Document Scanner</h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>
+        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Document Scanner</h1>
+        <p style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "14px" }}>
           Use your camera to scan documents. Apply filters and export as PDF.
         </p>
       </div>
@@ -104,26 +116,34 @@ export default function ScannerPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "20px", minHeight: "calc(100vh - 200px)" }}>
         {/* Camera view */}
         <div className="glass-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", background: "rgba(0,0,0,0.4)", minHeight: "400px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", background: "rgba(var(--color-obverse-rgb), 0.4)", minHeight: "400px", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {stream ? (
               <>
                 <video ref={videoRef} autoPlay playsInline muted
                   style={{ width: "100%", borderRadius: "16px", display: "block", filter: FILTERS[filter] }} />
                 {/* Scan guide overlay */}
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-                  <div style={{ position: "absolute", top: "10%", left: "10%", right: "10%", bottom: "10%", border: "2px solid rgba(99,102,241,0.6)", borderRadius: "8px" }} />
-                  <div className="scan-line" />
+                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div style={{ position: "absolute", top: "15%", left: "10%", right: "10%", bottom: "15%", border: "2px solid rgba(10, 132, 255, 0.8)", borderRadius: "12px", boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)" }} />
+                  <div className="scan-line" style={{ background: "linear-gradient(90deg, transparent, #0a84ff, #64d2ff, #0a84ff, transparent)", boxShadow: "0 0 15px rgba(10, 132, 255, 0.8)" }} />
                   {/* Corner markers */}
                   {["top-left", "top-right", "bottom-left", "bottom-right"].map(pos => (
                     <div key={pos} style={{
                       position: "absolute",
-                      width: "20px", height: "20px",
-                      borderColor: "#6366f1",
+                      width: "30px", height: "30px",
+                      borderColor: "#0a84ff",
                       borderStyle: "solid",
-                      borderWidth: pos.includes("top") ? "2px 0 0 2px" : "0 2px 2px 0",
-                      ...(pos.includes("top") ? { top: "10%", [pos.includes("left") ? "left" : "right"]: "10%" } : { bottom: "10%", [pos.includes("left") ? "left" : "right"]: "10%" }),
+                      borderWidth: pos.includes("top") ? "4px 0 0 4px" : "0 4px 4px 0",
+                      ...(pos.includes("top") ? { top: "15%", [pos.includes("left") ? "left" : "right"]: "10%" } : { bottom: "15%", [pos.includes("left") ? "left" : "right"]: "10%" }),
+                      transform: pos === "top-right" ? "rotate(90deg)" : pos === "bottom-left" ? "rotate(90deg)" : "none"
                     }} />
                   ))}
+                  {/* Viewfinder crosshairs */}
+                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ position: "absolute", width: "2px", height: "100%", background: "rgba(255,255,255,0.3)" }} />
+                    <div style={{ position: "absolute", width: "100%", height: "2px", background: "rgba(255,255,255,0.3)" }} />
+                  </div>
+                  {/* Flash effect */}
+                  {flash && <div style={{ position: "absolute", inset: 0, background: "white", zIndex: 10 }} />}
                 </div>
               </>
             ) : (
@@ -132,8 +152,8 @@ export default function ScannerPage() {
                   <Camera size={28} color="#6366f1" />
                 </div>
                 <div>
-                  <p style={{ color: "rgba(255,255,255,0.7)", fontWeight: 600, marginBottom: "6px" }}>Camera not active</p>
-                  <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "13px" }}>
+                  <p style={{ color: "var(--text-primary)", fontWeight: 600, marginBottom: "6px" }}>Camera not active</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>
                     {cameraError || "Click 'Start Camera' to begin scanning"}
                   </p>
                 </div>
@@ -153,21 +173,31 @@ export default function ScannerPage() {
                 {filters.map(f => (
                   <button key={f.id} onClick={() => setFilter(f.id)} style={{
                     flex: 1, padding: "8px 4px", borderRadius: "10px", fontSize: "11px", cursor: "pointer", fontWeight: 500,
-                    background: filter === f.id ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.04)",
-                    border: `1px solid ${filter === f.id ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`,
-                    color: filter === f.id ? "#a5b4fc" : "rgba(255,255,255,0.4)",
+                    background: filter === f.id ? "rgba(99,102,241,0.2)" : "rgba(var(--color-invert-rgb), 0.04)",
+                    border: `1px solid ${filter === f.id ? "rgba(99,102,241,0.4)" : "rgba(var(--color-invert-rgb), 0.06)"}`,
+                    color: filter === f.id ? "var(--accent-active-text)" : "rgba(var(--color-invert-rgb), 0.4)",
                   }}>{f.label}</button>
                 ))}
               </div>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button className="btn-primary" onClick={capture}
-                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "15px" }}>
-                  <Camera size={18} /> Capture Page
-                </button>
+              <div style={{ display: "flex", gap: "16px", alignItems: "center", justifyContent: "center", marginTop: "10px" }}>
                 <button className="btn-secondary" onClick={stopCamera}
-                  style={{ display: "flex", alignItems: "center", gap: "6px", padding: "12px 16px" }}>
-                  <RefreshCw size={14} /> Stop
+                  style={{ display: "flex", alignItems: "center", gap: "6px", padding: "12px 16px", borderRadius: "50%", width: "50px", height: "50px", justifyContent: "center" }}>
+                  <RefreshCw size={18} />
                 </button>
+                <button onClick={capture}
+                  style={{ 
+                    width: "72px", height: "72px", borderRadius: "50%", background: "var(--accent-primary)", 
+                    border: "4px solid rgba(255,255,255,0.2)", cursor: "pointer", 
+                    boxShadow: "0 0 0 2px var(--accent-primary), 0 8px 24px var(--glow-primary)",
+                    display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.1s"
+                  }}
+                  onMouseDown={e => e.currentTarget.style.transform = "scale(0.95)"}
+                  onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                >
+                  <div style={{ width: "54px", height: "54px", borderRadius: "50%", background: "white" }} />
+                </button>
+                <div style={{ width: "50px" }} /> {/* Spacer for alignment */}
               </div>
             </>
           )}
@@ -176,7 +206,7 @@ export default function ScannerPage() {
         {/* Captures panel */}
         <div className="glass-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Scanned Pages ({captures.length})
             </span>
             {captures.length > 0 && (
@@ -186,16 +216,16 @@ export default function ScannerPage() {
 
           <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
             {captures.map((src, i) => (
-              <div key={i} style={{ position: "relative", borderRadius: "10px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div key={i} style={{ position: "relative", borderRadius: "10px", overflow: "hidden", border: "1px solid rgba(var(--color-invert-rgb), 0.08)" }}>
                 <img src={src} alt={`Scan ${i + 1}`} style={{ width: "100%", display: "block" }} />
-                <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "6px 8px", background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)" }}>Page {i + 1}</span>
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "6px 8px", background: "rgba(var(--color-obverse-rgb), 0.5)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "11px", color: "var(--text-primary)" }}>Page {i + 1}</span>
                   <button onClick={() => removeCapture(i)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>✕</button>
                 </div>
               </div>
             ))}
             {!captures.length && (
-              <div style={{ textAlign: "center", padding: "40px 20px", color: "rgba(255,255,255,0.2)", fontSize: "13px" }}>
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)", fontSize: "13px" }}>
                 Captured pages will appear here
               </div>
             )}

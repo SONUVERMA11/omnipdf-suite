@@ -34,7 +34,7 @@ export default function PDFToImagesPage() {
     setPreviewData(data);
     // get page count
     const pdfjsLib = await import("pdfjs-dist");
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
     const pdf = await pdfjsLib.getDocument({ data }).promise;
     setPageCount(pdf.numPages);
     toast(`Loaded: ${pdf.numPages} pages`, "success");
@@ -56,7 +56,7 @@ export default function PDFToImagesPage() {
 
     try {
       const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
       const pdf = await pdfjsLib.getDocument({ data: previewData }).promise;
 
       const pages = rangeMode === "all"
@@ -75,7 +75,7 @@ export default function PDFToImagesPage() {
         const vp = page.getViewport({ scale });
         const canvas = document.createElement("canvas");
         canvas.width = vp.width; canvas.height = vp.height;
-        await (page.render({ canvas: canvas.getContext("2d")!, viewport: vp } as any)).promise;
+        await page.render({ canvas, viewport: vp }).promise;
         const mimeType = format === "png" ? "image/png" : format === "webp" ? "image/webp" : "image/jpeg";
         const dataUrl = canvas.toDataURL(mimeType, quality / 100);
         thumbs.push(dataUrl);
@@ -114,8 +114,8 @@ export default function PDFToImagesPage() {
         <div className="badge badge-orange" style={{ marginBottom: "10px", background: "rgba(249,115,22,0.15)", color: "#fdba74", border: "1px solid rgba(249,115,22,0.25)", display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 12px", borderRadius: "999px", fontSize: "12px" }}>
           <Image size={11} /> PDF TO IMAGES
         </div>
-        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>PDF to Images</h1>
-        <p style={{ color: "rgba(255,255,255,0.4)", marginTop: "6px", fontSize: "14px" }}>
+        <h1 style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>PDF to Images</h1>
+        <p style={{ color: "var(--text-secondary)", marginTop: "6px", fontSize: "14px" }}>
           Export each PDF page as a high-quality image. Choose DPI up to 300.
         </p>
       </div>
@@ -126,35 +126,35 @@ export default function PDFToImagesPage() {
             <DropZone onFiles={handleFile} accept=".pdf" multiple={false} label="Drop PDF here" icon={<Upload size={22} color="#f97316" />} />
           ) : (
             <div style={{ padding: "10px 12px", borderRadius: "10px", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", fontSize: "12px" }}>
-              <div style={{ color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>{file.name}</div>
-              <div style={{ color: "rgba(255,255,255,0.3)", marginTop: "2px" }}>{formatBytes(file.size)} · {pageCount} pages</div>
+              <div style={{ color: "var(--text-primary)", fontWeight: 500 }}>{file.name}</div>
+              <div style={{ color: "var(--text-muted)", marginTop: "2px" }}>{formatBytes(file.size)} · {pageCount} pages</div>
               <button onClick={() => { setFile(null); setPreviewData(null); setPreviews([]); }} style={{ marginTop: "6px", color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "11px" }}>Remove</button>
             </div>
           )}
 
           <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>Output Format</label>
+            <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>Output Format</label>
             <div style={{ display: "flex", gap: "6px" }}>
               {formats.map(f => (
                 <button key={f.id} onClick={() => setFormat(f.id)} style={{
                   flex: 1, padding: "9px", borderRadius: "10px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
-                  background: format === f.id ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${format === f.id ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`,
-                  color: format === f.id ? "#a5b4fc" : "rgba(255,255,255,0.4)",
+                  background: format === f.id ? "rgba(99,102,241,0.2)" : "rgba(var(--color-invert-rgb), 0.03)",
+                  border: `1px solid ${format === f.id ? "rgba(99,102,241,0.4)" : "rgba(var(--color-invert-rgb), 0.06)"}`,
+                  color: format === f.id ? "var(--accent-active-text)" : "rgba(var(--color-invert-rgb), 0.4)",
                 }}>{f.label}</button>
               ))}
             </div>
           </div>
 
           <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>Resolution (DPI)</label>
+            <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>Resolution (DPI)</label>
             <div style={{ display: "flex", gap: "6px" }}>
               {dpis.map(d => (
                 <button key={d} onClick={() => setDpi(d)} style={{
                   flex: 1, padding: "9px", borderRadius: "10px", fontSize: "12px", fontWeight: 600, cursor: "pointer",
-                  background: dpi === d ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${dpi === d ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`,
-                  color: dpi === d ? "#a5b4fc" : "rgba(255,255,255,0.4)",
+                  background: dpi === d ? "rgba(99,102,241,0.2)" : "rgba(var(--color-invert-rgb), 0.03)",
+                  border: `1px solid ${dpi === d ? "rgba(99,102,241,0.4)" : "rgba(var(--color-invert-rgb), 0.06)"}`,
+                  color: dpi === d ? "var(--accent-active-text)" : "rgba(var(--color-invert-rgb), 0.4)",
                 }}>{d}</button>
               ))}
             </div>
@@ -162,20 +162,20 @@ export default function PDFToImagesPage() {
 
           {format !== "png" && (
             <div>
-              <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" }}>Quality: {quality}%</label>
+              <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>Quality: {quality}%</label>
               <input type="range" min={60} max={100} value={quality} onChange={e => setQuality(Number(e.target.value))} />
             </div>
           )}
 
           <div>
-            <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "8px" }}>Page Range</label>
+            <label style={{ fontSize: "12px", color: "var(--text-secondary)", display: "block", marginBottom: "8px" }}>Page Range</label>
             <div style={{ display: "flex", gap: "6px", marginBottom: "8px" }}>
               {(["all", "range"] as const).map(m => (
                 <button key={m} onClick={() => setRangeMode(m)} style={{
                   flex: 1, padding: "8px", borderRadius: "10px", fontSize: "12px", cursor: "pointer", textTransform: "capitalize",
-                  background: rangeMode === m ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${rangeMode === m ? "rgba(99,102,241,0.4)" : "rgba(255,255,255,0.06)"}`,
-                  color: rangeMode === m ? "#a5b4fc" : "rgba(255,255,255,0.4)",
+                  background: rangeMode === m ? "rgba(99,102,241,0.2)" : "rgba(var(--color-invert-rgb), 0.03)",
+                  border: `1px solid ${rangeMode === m ? "rgba(99,102,241,0.4)" : "rgba(var(--color-invert-rgb), 0.06)"}`,
+                  color: rangeMode === m ? "var(--accent-active-text)" : "rgba(var(--color-invert-rgb), 0.4)",
                 }}>{m === "all" ? "All Pages" : "Custom Range"}</button>
               ))}
             </div>
@@ -185,7 +185,7 @@ export default function PDFToImagesPage() {
           {processing && (
             <div>
               <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
-              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", marginTop: "6px", textAlign: "center" }}>Converting... {progress}%</p>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px", textAlign: "center" }}>Converting... {progress}%</p>
             </div>
           )}
 
@@ -197,7 +197,7 @@ export default function PDFToImagesPage() {
         </div>
 
         <div className="glass-card" style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ fontSize: "12px", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             {previews.length > 0 ? `Output Preview (${previews.length} images)` : "PDF Preview"}
           </div>
           {previews.length > 0 ? (
@@ -205,7 +205,7 @@ export default function PDFToImagesPage() {
               {previews.map((src, i) => (
                 <div key={i} className="page-thumb">
                   <img src={src} alt={`Page ${i + 1}`} style={{ width: "100%", display: "block", borderRadius: "6px" }} />
-                  <div style={{ padding: "4px", textAlign: "center", fontSize: "10px", color: "rgba(255,255,255,0.3)" }}>
+                  <div style={{ padding: "4px", textAlign: "center", fontSize: "10px", color: "var(--text-muted)" }}>
                     page {i + 1} · {format.toUpperCase()}
                   </div>
                 </div>

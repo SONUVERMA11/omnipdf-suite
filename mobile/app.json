@@ -31,6 +31,12 @@
     },
     "plugins": [
       "expo-sharing"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "720aa57b-0a14-4628-bdc7-1d0a8d61e04e"
+      }
+    },
+    "owner": "malkhaan"
   }
 }

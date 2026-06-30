@@ -1,0 +1,53 @@
+name: Release Desktop App
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags (e.g. v1.0.0)
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest' # Creates .dmg
+          - platform: 'ubuntu-22.04' # Creates .deb, .AppImage
+          - platform: 'windows-latest' # Creates .exe
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux system dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Build Next.js Static Web App
+        run: npm run build
+
+      - name: Build Tauri Binary & Publish
+        uses: tauri-apps/tauri-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'OmniPDF Desktop ${{ github.ref_name }}'
+          releaseBody: 'OmniPDF Desktop client build for version ${{ github.ref_name }}.'
+          releaseDraft: true
+          prerelease: false

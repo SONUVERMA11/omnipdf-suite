@@ -8,10 +8,16 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sonuverma11.omnipdf"
+      "bundleIdentifier": "com.sonuverma11.omnipdf",
+      "infoPlist": {
+        "NSCameraUsageDescription": "OmniPDF needs access to your camera to scan documents."
+      }
     },
     "android": {
       "package": "com.sonuverma11.omnipdf",
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -24,13 +30,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sharing",
-      [
-        "react-native-vision-camera",
-        {
-          "cameraPermissionText": "OmniPDF needs access to your camera to scan documents."
-        }
-      ]
+      "expo-sharing"
     ]
   }
 }

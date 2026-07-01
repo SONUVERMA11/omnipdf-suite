@@ -4,11 +4,13 @@
   "main": "index.ts",
   "dependencies": {
     "expo": "~56.0.12",
+    "expo-document-picker": "^57.0.0",
     "expo-file-system": "~56.0.8",
     "expo-print": "~56.0.4",
     "expo-sharing": "~56.0.18",
     "expo-status-bar": "~56.0.4",
     "lucide-react-native": "^1.22.0",
+    "pdf-lib": "^1.17.1",
     "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-svg": "15.15.4",
